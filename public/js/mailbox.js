@@ -546,9 +546,25 @@ async function copyMailboxAddress() {
   if (!currentMailbox) return;
   
   try {
-    await navigator.clipboard.writeText(currentMailbox);
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(currentMailbox);
+    } else {
+      // 降级方案：使用传统的document.execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = currentMailbox;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
     showToast('邮箱地址已复制到剪贴板', 'success');
   } catch (error) {
+    console.error('复制失败:', error);
     // 降级方案
     const textArea = document.createElement('textarea');
     textArea.value = currentMailbox;
@@ -903,7 +919,22 @@ window.copyFromList = async function(ev, id){
     const btn = ev && (ev.currentTarget || ev.target);
     const code = (btn && btn.dataset ? String(btn.dataset.code || '').trim() : '');
     if (code){
-      await navigator.clipboard.writeText(code);
+      // 增强的复制功能，兼容Chrome浏览器
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       try{ showToast('已复制验证码：' + code, 'success'); }catch(_){ }
       return false;
     }
@@ -913,8 +944,29 @@ window.copyFromList = async function(ev, id){
     const raw = (email.html_content || email.content || '').toString();
     const txt = `${email.subject || ''} ` + raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
     const fallback = extractCode(txt) || txt;
-    await navigator.clipboard.writeText(fallback);
+    
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(fallback);
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = fallback;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
     try{ showToast(fallback && fallback.length<=12 ? '已复制验证码/激活码：' + fallback : '已复制邮件内容', 'success'); }catch(_){ }
     return false;
-  }catch(_){ showToast('复制失败', 'warn'); return false; }
+  }catch(error){ 
+    console.error('复制失败:', error);
+    showToast('复制失败', 'warn'); 
+    return false; 
+  }
 };

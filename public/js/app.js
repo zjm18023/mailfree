@@ -862,8 +862,41 @@ els.copy.onclick = async () => {
     try{ showToast('请先生成或选择一个邮箱', 'warn'); }catch(_){ }
     return;
   }
-  try { await navigator.clipboard.writeText(window.currentMailbox); } catch {}
-  const t = els.copy.textContent; els.copy.textContent='✅ 已复制'; setTimeout(()=>els.copy.textContent=t,1500);
+  
+  // 增强的复制功能，兼容Chrome浏览器
+  try {
+    // 优先使用现代剪贴板API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(window.currentMailbox);
+    } else {
+      // 降级方案：使用传统的document.execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = window.currentMailbox;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
+    const t = els.copy.textContent; 
+    els.copy.textContent='✅ 已复制'; 
+    setTimeout(()=>els.copy.textContent=t,1500);
+    showToast('邮箱地址已复制到剪贴板', 'success');
+  } catch (error) {
+    console.error('复制失败:', error);
+    showToast('复制失败，请手动复制邮箱地址', 'warn');
+    
+    // 如果复制失败，可以选择显示邮箱地址供用户手动复制
+    const emailText = document.getElementById('email-text');
+    if (emailText) {
+      emailText.style.userSelect = 'all';
+      emailText.focus();
+    }
+  }
 }
 
 els.clear.onclick = async () => {
@@ -1207,7 +1240,23 @@ window.copyEmailAllText = async (btn) => {
       }
     }
     const text = [subject ? `主题：${subject}` : '', meta, bodyText].filter(Boolean).join('\n\n');
-    await navigator.clipboard.writeText(text);
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
     if (btn){
       const origin = btn.innerHTML;
       btn.innerHTML = '<span class="btn-icon">✅</span><span>已复制</span>';
@@ -1215,7 +1264,10 @@ window.copyEmailAllText = async (btn) => {
       setTimeout(()=>{ btn.innerHTML = origin; btn.disabled = false; }, 1200);
     }
     showToast('已复制所有文本', 'success');
-  }catch(_){ showToast('复制失败', 'warn'); }
+  }catch(error){ 
+    console.error('复制失败:', error);
+    showToast('复制失败', 'warn'); 
+  }
 }
 
 window.copyEmailContent = async (id) => {
@@ -1236,9 +1288,29 @@ window.copyEmailContent = async (id) => {
     const text = `${email.subject || ''} ` + raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim();
     const code = extractCode(text);
     const toCopy = code || text;
-    await navigator.clipboard.writeText(toCopy);
+    
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(toCopy);
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = toCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
     showToast(code ? `已复制验证码/激活码：${code}` : '已复制邮件内容', 'success');
-  }catch(_){ showToast('复制失败', 'warn'); }
+  }catch(error){ 
+    console.error('复制失败:', error);
+    showToast('复制失败', 'warn'); 
+  }
 }
 
 // 在弹窗中点击复制时，给按钮做轻量反馈，避免用户误以为无响应
@@ -2025,20 +2097,40 @@ async function pollSentStatus(resendId, maxTries = 10){
 // 在弹窗内复制验证码并给按钮即时反馈
 window.copyCodeInModal = async (code, btn) => {
   try{
-    await navigator.clipboard.writeText(String(code||''));
+    const textToCopy = String(code||'');
+    
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
     if (btn){
       const origin = btn.innerHTML;
       btn.innerHTML = '<span class="btn-icon">✅</span><span>已复制验证码</span>';
       btn.disabled = true;
       setTimeout(()=>{ btn.innerHTML = origin; btn.disabled = false; }, 1200);
     }
-    showToast('已复制验证码/激活码：' + String(code||''), 'success');
-  }catch(_){
+    showToast('已复制验证码/激活码：' + textToCopy, 'success');
+  }catch(error){
+    console.error('复制失败:', error);
     if (btn){
       const origin = btn.innerHTML;
       btn.innerHTML = '<span class="btn-icon">⚠️</span><span>复制失败</span>';
       setTimeout(()=>{ btn.innerHTML = origin; }, 1200);
     }
+    showToast('复制失败', 'warn');
   }
 }
 
@@ -2048,7 +2140,23 @@ window.copyFromList = async (ev, id) => {
     const btn = ev.currentTarget || ev.target;
     const code = (btn && btn.dataset ? (btn.dataset.code || '') : '').trim();
     if (code){
-      await navigator.clipboard.writeText(code);
+      // 增强的复制功能，兼容Chrome浏览器
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
       const original = btn.innerHTML;
       btn.innerHTML = '<span class="btn-icon">✅</span>';
       btn.disabled = true;

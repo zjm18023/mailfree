@@ -92,8 +92,32 @@ async function showToast(message, type='info'){
 
 // 公用复制
 window.copyText = async (text) => {
-  try{ await navigator.clipboard.writeText(String(text||'')); showToast('已复制到剪贴板','success'); }
-  catch(_){ showToast('复制失败','warn'); }
+  try{ 
+    const textToCopy = String(text||'');
+    
+    // 增强的复制功能，兼容Chrome浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
+    showToast('已复制到剪贴板','success'); 
+  }
+  catch(error){ 
+    console.error('复制失败:', error);
+    showToast('复制失败','warn'); 
+  }
 }
 
 function openAdminConfirm(message, onOk){
